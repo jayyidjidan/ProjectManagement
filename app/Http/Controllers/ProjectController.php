@@ -22,9 +22,14 @@ class ProjectController extends Controller
 
         $sort = request('sort', 'created_at');
         $direction = request('direction', 'desc');
-        
-        // 1. Tangkap keyword pencarian dari header global
         $keyword = request('q'); 
+
+        // AMBIL DATA UNTUK OPSI DROPDOWN FILTER
+        $filterCategories = Kategoris::all();
+        $filterTypes = Tipes::all();
+        $filterStatuses = StatusProyeks::all();
+        // Mengambil data member untuk opsi Project Manager
+        $filterManagers = Members::orderBy('member_name')->get(); 
 
         $projectQuery = Proyeks::query();
 
@@ -38,49 +43,10 @@ class ProjectController extends Controller
 
         $total = (clone $projectQuery)->count();
 
-        $planning = (clone $projectQuery)
-            ->whereHas(
-                'status',
-                fn ($q) =>
-                    $q->where(
-                        'nama_status',
-                        'Planning'
-                    )
-            )
-            ->count();
-
-        $ongoing = (clone $projectQuery)
-            ->whereHas(
-                'status',
-                fn ($q) =>
-                    $q->where(
-                        'nama_status',
-                        'On Going'
-                    )
-            )
-            ->count();
-
-        $finished = (clone $projectQuery)
-            ->whereHas(
-                'status',
-                fn ($q) =>
-                    $q->where(
-                        'nama_status',
-                        'Finished'
-                    )
-            )
-            ->count();
-
-        $cancelled = (clone $projectQuery)
-            ->whereHas(
-                'status',
-                fn ($q) =>
-                    $q->where(
-                        'nama_status',
-                        'Cancelled'
-                    )
-            )
-            ->count();
+        $planning = (clone $projectQuery)->whereHas('status', fn ($q) => $q->where('nama_status', 'Planning'))->count();
+        $ongoing = (clone $projectQuery)->whereHas('status', fn ($q) => $q->where('nama_status', 'On Going'))->count();
+        $finished = (clone $projectQuery)->whereHas('status', fn ($q) => $q->where('nama_status', 'Finished'))->count();
+        $cancelled = (clone $projectQuery)->whereHas('status', fn ($q) => $q->where('nama_status', 'Cancelled'))->count();
 
         $projects = $projectQuery
             ->with([
@@ -90,30 +56,34 @@ class ProjectController extends Controller
                 'projectManager',
                 'kategoris'
             ])
-            ->when(
-                request('status'),
-                function ($query) {
-                    $query->where(
-                        'id_status',
-                        request('status')
-                    );
-                }
-            )
-            // 2. TAMBAHKAN LOGIKA SEARCH DI SINI
+            // LOGIKA FILTER STATUS (Sudah ada & dimodifikasi sedikit agar kompatibel dengan search & filter)
+            ->when(request('status'), function ($query) {
+                $query->where('id_status', request('status'));
+            })
+            // TAMBAHAN LOGIKA FILTER TYPE
+            ->when(request('type'), function ($query) {
+                $query->where('id_tipe', request('type'));
+            })
+            // TAMBAHAN LOGIKA FILTER PROJECT MANAGER
+            ->when(request('manager'), function ($query) {
+                $query->where('id_project_manager', request('manager'));
+            })
+            // TAMBAHAN LOGIKA FILTER KATEGORI (Mendukung pemilihan lebih dari 1/array)
+            ->when(request('categories'), function ($query) {
+                $query->whereHas('kategoris', function ($q) {
+                    $q->whereIn('kategoris.id_kategori', request('categories'));
+                });
+            })
+            // LOGIKA PENCARIAN KEYWORD GLOBAL
             ->when($keyword, function ($query, $keyword) {
-                // Sesuaikan 'nama_proyek' dengan nama kolom asli di tokomu (misal: 'nama_project' atau 'title')
                 return $query->where('nama_proyek', 'like', "%{$keyword}%");
-                
-                // Jika ingin mencari berdasarkan nama klien juga, kamu bisa gunakan ini:
-                // return $query->where('nama_proyek', 'like', "%{$keyword}%")
-                //              ->orWhereHas('klien', fn($q) => $q->where('nama_klien', 'like', "%{$keyword}%"));
             })
             ->orderBy(
                 $sort,
                 $direction
             )
             ->paginate(10)
-            ->withQueryString(); // Ini penting agar keyword 'q' tidak hilang saat ganti halaman pagination
+            ->withQueryString(); 
 
         return view(
             'projects.index',
@@ -123,7 +93,12 @@ class ProjectController extends Controller
                 'planning',
                 'ongoing',
                 'finished',
-                'cancelled'
+                'cancelled',
+                // JANGAN LUPA COMPACT VARIABEL FILTERNYA KE VIEW
+                'filterCategories',
+                'filterTypes',
+                'filterStatuses',
+                'filterManagers'
             )
         );
     }

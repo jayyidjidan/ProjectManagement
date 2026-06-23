@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Transaksi;
 use App\Models\Pembayaran;
 use App\Models\JenisTransaksi;
+use App\Models\Proyeks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -14,14 +15,18 @@ class TransactionController extends Controller
     {
         $sort = request('sort', 'tanggal_transaksi');
         $direction = request('direction', 'desc');
-
-        // 1. Tangkap keyword pencarian global
         $keyword = request('q');
 
         $transactions = Transaksi::with([
             'pembayaran.project',
             'jenis'
         ])
+        // 1. FILTER BERDASARKAN PROJECT (Menembus Relasi Pembayaran)
+        ->when(request('project'), function ($query) {
+            $query->whereHas('pembayaran.project', function ($q) {
+                $q->where('id_proyek', request('project'));
+            });
+        })
         ->when(
             request('payment_method'),
             function ($query) {
@@ -40,32 +45,27 @@ class TransactionController extends Controller
                 );
             }
         )
-        // 2. TAMBAHKAN LOGIKA SEARCH DI SINI (Menembus relasi ke Nama Proyek)
         ->when($keyword, function ($query, $keyword) {
             return $query->whereHas('pembayaran.project', function ($q) use ($keyword) {
                 $q->where('nama_proyek', 'like', "%{$keyword}%");
             });
-            
-            // Opsional: Jika di tabel transaksi ada kolom 'keterangan' dan ingin bisa dicari juga, gunakan ini:
-            // return $query->where('keterangan', 'like', "%{$keyword}%")
-            //              ->orWhereHas('pembayaran.project', function ($q) use ($keyword) {
-            //                  $q->where('nama_proyek', 'like', "%{$keyword}%");
-            //              });
         })
         ->orderBy(
             $sort,
             $direction
         )
         ->paginate(10)
-        ->withQueryString(); // Memastikan filter metode, jenis, dan keyword search tidak hilang saat ganti halaman
+        ->withQueryString();
 
         $types = JenisTransaksi::all();
+        $projects = Proyeks::orderBy('nama_proyek')->get(); // <-- Ambil data seluruh project untuk di-looping di filter
 
         return view(
             'transactions.index',
             compact(
                 'transactions',
-                'types'
+                'types',
+                'projects' // <-- Jangan lupa kirim ke view
             )
         );
     }

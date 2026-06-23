@@ -12,23 +12,100 @@
 <div class="flex items-end justify-between mb-6">
 
     <div class="space-y-2">
-
         <h1 class="text-4xl font-bold">
             Projects
         </h1>
-
         <p class="text-gray-500">
             Manage all projects in your company
         </p>
-
     </div>
 
-    <a href="{{ route('projects.create') }}">
-        <x-button-primary>
-            Add Project
-        </x-button-primary>
-    </a>
+    <div class="flex items-center gap-3">
+        
+        <div class="relative" id="filter-container">
+            <button type="button" onclick="toggleFilterDropdown()" class="px-5 py-2.5 rounded-2xl border border-border bg-white flex items-center gap-2 hover:bg-gray-50 transition text-sm font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                Filters
+            </button>
 
+            <div id="filter-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-border z-50 p-5">
+                <form action="{{ route('projects.index') }}" method="GET">
+                    
+                    @if(request('q')) <input type="hidden" name="q" value="{{ request('q') }}"> @endif
+                    @if(request('sort')) <input type="hidden" name="sort" value="{{ request('sort') }}"> @endif
+                    @if(request('direction')) <input type="hidden" name="direction" value="{{ request('direction') }}"> @endif
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select name="status" class="w-full rounded-xl border border-border p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-gray-50">
+                            <option value="">Semua Status</option>
+                            @foreach($filterStatuses as $status)
+                                <option value="{{ $status->id_status }}" {{ request('status') == $status->id_status ? 'selected' : '' }}>
+                                    {{ $status->nama_status }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                        <select name="type" class="w-full rounded-xl border border-border p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-gray-50">
+                            <option value="">Semua Type</option>
+                            @foreach($filterTypes as $type)
+                                <option value="{{ $type->id_tipe }}" {{ request('type') == $type->id_tipe ? 'selected' : '' }}>
+                                    {{ $type->nama_tipe }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Project Manager</label>
+                        <select name="manager" class="w-full rounded-xl border border-border p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-gray-50">
+                            <option value="">Semua PM</option>
+                            @foreach($filterManagers as $manager)
+                                <option value="{{ $manager->id_member }}" {{ request('manager') == $manager->id_member ? 'selected' : '' }}>
+                                    {{ $manager->member_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Categories (Pilih lebih dari satu)</label>
+                        <div class="max-h-36 overflow-y-auto border border-border bg-gray-50 rounded-xl p-3 space-y-2">
+                            @foreach($filterCategories as $category)
+                                <label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="categories[]" value="{{ $category->id_kategori }}"
+                                        {{ in_array($category->id_kategori, request('categories', [])) ? 'checked' : '' }}
+                                        class="rounded text-primary focus:ring-primary w-4 h-4 border-gray-300">
+                                    {{ $category->nama_kategori }}
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between mt-6">
+                        <a href="{{ route('projects.index') }}" class="text-sm text-gray-500 hover:text-gray-800 underline">
+                            Clear Filter
+                        </a>
+                        <button type="submit" class="px-5 py-2.5 bg-black text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition">
+                            Apply Filter
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+        <a href="{{ route('projects.create') }}">
+            <x-button-primary>
+                Add Project
+            </x-button-primary>
+        </a>
+
+    </div>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
@@ -369,6 +446,7 @@
         </table>
 
     </div>
+    
 
 </x-card>
 
@@ -377,5 +455,20 @@
     {{ $projects->links() }}
 
 </div>
+
+<script>
+    function toggleFilterDropdown() {
+        const dropdown = document.getElementById('filter-dropdown');
+        dropdown.classList.toggle('hidden');
+    }
+
+    // Menutup dropdown jika user menekan / klik sembarang area di luar kotak filter
+    window.addEventListener('click', function(e) {
+        const filterContainer = document.getElementById('filter-container');
+        if (filterContainer && !filterContainer.contains(e.target)) {
+            document.getElementById('filter-dropdown').classList.add('hidden');
+        }
+    });
+</script>
 
 @endsection

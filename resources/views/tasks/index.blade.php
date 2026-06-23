@@ -51,109 +51,90 @@
 
     <div class="flex items-center gap-3">
 
-        {{-- FILTER --}}
-        <form
-            method="GET"
-            class="flex gap-3">
+        {{-- FILTER DROPDOWN MODEL PROJECTS --}}
+        <div class="relative" id="filter-container">
+            <button type="button" onclick="toggleFilterDropdown()" class="px-5 py-2.5 rounded-2xl border border-border bg-white flex items-center gap-2 hover:bg-gray-50 transition text-sm font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                Filters
+            </button>
 
-            <select
-                name="status"
-                onchange="this.form.submit()"
-                class="rounded-xl border border-border px-4 py-2">
+            <div id="filter-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-border z-50 p-5">
+                <form action="{{ route('tasks.index') }}" method="GET">
+                    
+                    {{-- Menyimpan parameter sort dan search agar tidak hilang saat memfilter --}}
+                    @if(request('sort')) <input type="hidden" name="sort" value="{{ request('sort') }}"> @endif
+                    @if(request('direction')) <input type="hidden" name="direction" value="{{ request('direction') }}"> @endif
+                    @if(request('q')) <input type="hidden" name="q" value="{{ request('q') }}"> @endif
 
-                <option value="">
-                    All Status
-                </option>
+                    {{-- 1. FILTER PROJECT --}}
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Project</label>
+                        <select name="project" class="w-full rounded-xl border border-border p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-gray-50">
+                            <option value="">All Projects</option>
+                            @foreach($projects as $p)
+                                <option value="{{ $p->id_proyek }}" @selected(request('project') == $p->id_proyek)>
+                                    {{ $p->nama_proyek }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                <option
-                    value="Planning"
-                    @selected(request('status') == 'Planning')>
+                    {{-- 2. FILTER STATUS --}}
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select name="status" class="w-full rounded-xl border border-border p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-gray-50">
+                            <option value="">All Status</option>
+                            @foreach($statuses as $s)
+                                <option value="{{ $s->status_name }}" @selected(request('status') == $s->status_name)>
+                                    {{ $s->status_name }}
+                                </option>
+                            @endforeach
+                            <option value="Overdue" @selected(request('status') == 'Overdue')>Overdue</option>
+                        </select>
+                    </div>
 
-                    Planning
+                    {{-- 3. FILTER PRIORITY --}}
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                        <select name="priority" class="w-full rounded-xl border border-border p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-gray-50">
+                            <option value="">All Priorities</option>
+                            @foreach($priorities as $pr)
+                                <option value="{{ $pr->id_priority }}" @selected(request('priority') == $pr->id_priority)>
+                                    {{ $pr->priority_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                </option>
+                    {{-- ACTION BUTTONS --}}
+                    <div class="flex items-center justify-between mt-6">
+                        <a href="{{ route('tasks.index') }}" class="text-sm text-gray-500 hover:text-gray-800 underline">
+                            Clear Filter
+                        </a>
+                        <button type="submit" class="px-5 py-2.5 bg-black text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition">
+                            Apply Filter
+                        </button>
+                    </div>
 
-                <option
-                    value="On Going"
-                    @selected(request('status') == 'On Going')>
+                </form>
+            </div>
+        </div>
 
-                    On Going
+        @php
+        // Cek apakah ada filter project di URL saat ini
+        $projectIdParams = request('project') ? ['project' => request('project')] : [];
+        @endphp
 
-                </option>
-
-                <option
-                    value="Reviewed"
-                    @selected(request('status') == 'Reviewed')>
-
-                    Reviewed
-
-                </option>
-
-                <option
-                    value="Finished"
-                    @selected(request('status') == 'Finished')>
-
-                    Finished
-
-                </option>
-
-                <option
-                    value="Canceled"
-                    @selected(request('status') == 'Canceled')>
-
-                    Canceled
-
-                </option>
-
-            </select>
-
-            {{-- SORT --}}
-            <select
-                name="sort"
-                onchange="this.form.submit()"
-                class="rounded-xl border border-border px-4 py-2">
-
-                <option
-                    value="nama_task"
-                    @selected(request('sort') == 'nama_task')>
-
-                    Task Name
-
-                </option>
-
-                <option
-                    value="deadline_task"
-                    @selected(request('sort') == 'deadline_task')>
-
-                    Deadline
-
-                </option>
-
-                <option
-                    value="created_at"
-                    @selected(request('sort') == 'created_at')>
-
-                    Created Date
-
-                </option>
-
-            </select>
-
-        </form>
-
-            @php
-            // Cek apakah ada filter project_id di URL saat ini
-            $projectIdParams = request('project_id') ? ['project_id' => request('project_id')] : [];
-            @endphp
-
-            <a href="{{ route('tasks.create', [
-                'project_id' => request('project_id'),
-                'origin' => 'tasks' // Tambahkan ini
-            ]) }}">
-                <x-button-primary>
-                    Add Task
-                </x-button-primary>
-            </a>
+        <a href="{{ route('tasks.create', [
+            'project' => request('project'),
+            'origin' => 'tasks'
+        ]) }}">
+            <x-button-primary>
+                Add Task
+            </x-button-primary>
+        </a>
 
     </div>
 
@@ -298,5 +279,20 @@
     'statuses' => $statuses,
     'members' => $members
 ])
+
+<script>
+    function toggleFilterDropdown() {
+        const dropdown = document.getElementById('filter-dropdown');
+        dropdown.classList.toggle('hidden');
+    }
+
+    // Menutup dropdown jika user menekan / klik sembarang area di luar kotak filter
+    window.addEventListener('click', function(e) {
+        const filterContainer = document.getElementById('filter-container');
+        if (filterContainer && !filterContainer.contains(e.target)) {
+            document.getElementById('filter-dropdown').classList.add('hidden');
+        }
+    });
+</script>
 
 @endsection

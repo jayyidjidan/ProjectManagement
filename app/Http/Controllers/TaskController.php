@@ -24,44 +24,46 @@ class TaskController extends Controller
             ->whereNotIn('id_status', [6, 8, 9])
             ->update(['id_status' => 9]);
 
-        // Mengambil parameter input dari request / URL query string
+        // Mengambil parameter input filter dari request
         $sort = $request->input('sort', 'created_at');
         $direction = $request->input('direction', 'desc');
-        $statusFilter = $request->input('status');
-        $projectId = $request->input('project_id'); 
         
-        // TANGKAP KEYWORD PENCARIAN GLOBAL DI SINI
+        // TANGKAP 3 PARAMETER FILTER BARU DI SINI
+        $projectFilter  = $request->input('project'); 
+        $statusFilter   = $request->input('status');
+        $priorityFilter = $request->input('priority');
+        
         $keyword = $request->input('q');
 
         // 2. MENCARI DATA PROJECT JIKA SEDANG DI-FILTER (Untuk Headline Dinamis)
         $currentProject = null;
-        if ($projectId) {
-            $currentProject = Proyeks::find($projectId); 
+        if ($projectFilter) {
+            $currentProject = Proyeks::find($projectFilter); 
         }
 
         // 3. QUERY UTAMA TASKS DENGAN FILTER + SEARCH
         $tasks = Task::with(['project', 'priority', 'status', 'assignees'])
-            ->when($projectId, function ($query) use ($projectId) {
-                $query->where('id_proyek', $projectId);
+            ->when($projectFilter, function ($query) use ($projectFilter) {
+                // Filter berdasarkan Project
+                $query->where('id_proyek', $projectFilter);
             })
             ->when($statusFilter, function ($query) use ($statusFilter) {
+                // Filter berdasarkan Status (berdasarkan nama status)
                 $query->whereHas('status', function ($q) use ($statusFilter) {
                     $q->where('status_name', $statusFilter);
                 });
             })
-            // TAMBAHKAN LOGIKA SEARCH DI SINI
+            ->when($priorityFilter, function ($query) use ($priorityFilter) {
+                // Filter berdasarkan Priority
+                $query->where('id_priority', $priorityFilter);
+            })
             ->when($keyword, function ($query, $keyword) {
-                // Sesuaikan 'nama_task' dengan nama kolom judul tugas di databasemu
                 return $query->where('nama_task', 'like', "%{$keyword}%");
-                
-                // Opsional: Jika ingin cari berdasarkan deskripsi task juga, gunakan ini:
-                // return $query->where('nama_task', 'like', "%{$keyword}%")
-                //              ->orWhere('deskripsi_task', 'like', "%{$keyword}%");
             })
             ->orderBy($sort, $direction)
-            ->get(); // Karena menggunakan get(), semua filter koleksi di bawah otomatis ikut tersaring
+            ->get(); 
 
-        // 4. KOLEKSI TASK UNTUK SUMMARY CARD & TABEL (Otomatis ikut ter-filter)
+        // 4. KOLEKSI TASK UNTUK SUMMARY CARD & TABEL
         $planning = $tasks->filter(fn ($task) => $task->status?->status_name === 'Planning');
         $ongoing  = $tasks->filter(fn ($task) => $task->status?->status_name === 'On Going');
         $reviewed = $tasks->filter(fn ($task) => $task->status?->status_name === 'Reviewed');
@@ -73,7 +75,6 @@ class TaskController extends Controller
         $projects = Proyeks::orderBy('nama_proyek')->get();
         $priorities = Priority::orderBy('priority_name')->get();
         $members = Members::orderBy('member_name')->get();
-
         $statuses = StatusTasks::where('status_name', '!=', 'Overdue')
             ->orderBy('status_name')
             ->get();
