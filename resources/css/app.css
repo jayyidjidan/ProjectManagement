@@ -1,0 +1,51 @@
+@import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.ts-wrapper.single,
+.ts-wrapper.multi {
+    width: 100%;
+}
+
+.ts-control {
+    border-radius: 12px !important;
+    border: 1px solid #e5e7eb !important;
+    min-height: 42px !important;
+    box-shadow: none !important;
+}
+
+.ts-dropdown {
+    border-radius: 12px !important;
+}
+
+@theme {
+    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+
+    --color-primary: #FF5700;
+    --color-primary-light: #FF894C;
+
+    --color-success: #236952;
+    --color-warning: #FBC400;
+    --color-error: #C90033;
+    --color-info: #3B82F6;
+
+    --color-sidebar: #F9F9F9;
+    --color-dashboard: #FFFFFF;
+
+    --color-text-primary: #111111;
+    --color-text-secondary: #6B7280;
+
+    --color-border: #E5E7EB;
+
+    --radius-card: 16px;
+    --radius-button: 16px;
+    --radius-input: 16px;
+}
