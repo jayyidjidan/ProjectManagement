@@ -76,8 +76,8 @@
         background: white;
     }
     .ql-editor {
-        min-height: 150px;       /* Tinggi standar saat kosong */
-        max-height: 250px;       /* BATAS TINGGI MAKSIMAL (Ganti angka ini jika kurang panjang) */
+        min-height: 150px;
+        max-height: 250px;
         overflow-y: auto;
         padding: 0.75rem 1rem;
     }
@@ -94,7 +94,6 @@
         display: inline-block !important;
         vertical-align: middle !important;
     }
-    * Modifikasi scrollbar khusus untuk editor agar lebih rapi (Opsional) */
     .ql-editor::-webkit-scrollbar {
         width: 6px;
     }
@@ -232,12 +231,14 @@
                 </select>
             </div>
 
-            {{-- ASSIGNEES --}}
+            {{-- ASSIGNEES (MODIFIED WITH DATA ATTRIBUTES) --}}
             <div class="md:col-span-2">
                 <label class="block mb-2 font-medium">Assignees</label>
                 <select id="assignees" name="assignees[]" multiple>
                     @foreach($members as $member)
                         <option value="{{ $member->id_member }}" 
+                            data-position="{{ $member->jabatan?->position_name ?? 'No Position' }}"
+                            data-skills="{{ $member->skills->pluck('skill_name')->implode(', ') }}"
                             @if(old('assignees') && in_array($member->id_member, old('assignees'))) selected @endif>
                             {{ $member->member_name }}
                         </option>
@@ -251,12 +252,8 @@
             {{-- NOTE (QUILL JS EDITOR) --}}
             <div class="md:col-span-2 mb-15">
                 <label class="block mb-2 font-medium">Note</label>
-                {{-- Input rahasia untuk dikirimkan ke Laravel Backend --}}
                 <input type="hidden" name="note" id="hidden-note" value="{{ old('note') }}">
-                
-                {{-- Tempat Editor Quill muncul --}}
                 <div id="note-editor"></div>
-                
                 @error('note')
                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                 @enderror
@@ -281,21 +278,52 @@
 document.addEventListener('DOMContentLoaded', function () {
     
     // ==========================================
-    // 1. INISIALISASI TOM SELECT (ASSIGNEES)
+    // 1. INISIALISASI TOM SELECT (ASSIGNEES WITH CUSTOM RENDER)
     // ==========================================
     new TomSelect('#assignees', {
         plugins: ['remove_button'],
         create: false,
         hideSelected: true,
-        placeholder: 'Select assignees'
+        placeholder: 'Select assignees',
+        render: {
+            // Mengatur tampilan item di dalam list dropdown saat dibuka
+            option: function(data, escape) {
+                // Pecah string skill menjadi array jika ada data skill
+                const skillsArray = data.skills ? data.skills.split(', ') : [];
+                let skillsBadges = '';
+                
+                if (skillsArray.length > 0 && data.skills !== "") {
+                    skillsBadges = skillsArray.map(skill => 
+                        `<span class="bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0.5 rounded-full border border-gray-200">${escape(skill)}</span>`
+                    ).join(' ');
+                } else {
+                    skillsBadges = `<span class="text-gray-400 text-xs italic">No skills listed</span>`;
+                }
+
+                return `
+                    <div class="p-2.5 border-b border-gray-50 cursor-pointer">
+                        <div class="font-semibold text-gray-800">${escape(data.text)}</div>
+                        <div class="text-xs text-orange-600 font-medium mb-1.5">${escape(data.position)}</div>
+                        <div class="flex flex-wrap gap-1">${skillsBadges}</div>
+                    </div>
+                `;
+            },
+            // Mengatur tampilan teks tag ketika item sudah sukses dipilih/klik
+            item: function(data, escape) {
+                return `
+                    <div class="flex items-center gap-1">
+                        <span class="font-medium">${escape(data.text)}</span>
+                        <span class="text-[10px] opacity-75 italic">(${escape(data.position)})</span>
+                    </div>
+                `;
+            }
+        }
     });
 
 
     // ==========================================
     // 2. INISIALISASI QUILL JS (CATATAN / NOTE)
     // ==========================================
-    
-    // Daftarkan Custom Module Blot agar tidak error jika ada user mem-paste kotak file dari halaman lain
     const Embed = Quill.import('blots/embed');
     class AttachmentBlot extends Embed {
         static create(value) {
@@ -326,7 +354,6 @@ document.addEventListener('DOMContentLoaded', function () {
     AttachmentBlot.tagName = 'a';
     Quill.register(AttachmentBlot); 
 
-    // Render Editor
     let quill = new Quill('#note-editor', {
         theme: 'snow',
         modules: {
@@ -341,7 +368,6 @@ document.addEventListener('DOMContentLoaded', function () {
         placeholder: 'Tulis deskripsi / catatan task di sini...'
     });
 
-    // Jika terjadi error saat validasi dan halaman direfresh, kembalikan teks lama (old value)
     const hiddenNoteInput = document.getElementById('hidden-note');
     if (hiddenNoteInput.value) {
         quill.root.innerHTML = hiddenNoteInput.value;
@@ -352,11 +378,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // ==========================================
     document.getElementById('create-task-form').addEventListener('submit', function (e) {
         const html = quill.root.innerHTML;
-        
-        // Cek apakah murni kosong
         const isEmpty = quill.getText().trim() === '' && !html.includes('attachment-box');
-        
-        // Isi input hidden dengan hasil HTML dari Quill
         hiddenNoteInput.value = isEmpty ? '' : html;
     });
 

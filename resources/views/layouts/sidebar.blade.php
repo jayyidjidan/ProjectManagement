@@ -457,6 +457,33 @@
 
             @endif
 
+            {{-- REPORT --}}
+            @if($user->canManageProjects())
+            <li>
+                <details>
+                    <summary
+                        class="flex items-center justify-between px-4 py-3 rounded-2xl cursor-pointer hover:bg-[#EFEFEF] transition">
+                        <span>
+                            Report
+                        </span>
+                        <span>
+                            ⌄
+                        </span>
+                    </summary>
+                    <ul class="mt-2 ml-4 space-y-1">
+                        <li>
+                            <a
+                                href="{{ route('reports.projects.index') }}"
+                                class="block px-4 py-2 rounded-xl hover:bg-[#EFEFEF] {{ request()->routeIs('reports.projects.*') ? 'bg-[#EFEFEF] font-bold' : '' }}">
+                                Project Reports
+                            </a>
+                        </li>
+                        {{-- Nanti kalau mau tambah Report Task/Attendance, tinggal tambah <li> di sini --}}
+                    </ul>
+                </details>
+            </li>
+            @endif
+
         </ul>
 
     </nav>

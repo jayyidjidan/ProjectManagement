@@ -13,36 +13,58 @@ class MemberController extends Controller
 {
     public function index()
     {
-        // 1. Tangkap keyword pencarian global
+        // 1. Ambil keyword pencarian global dan parameter filter
         $keyword = request('q');
+        $selectedPosition = request('position');
+        $selectedRole = request('role');
+        $selectedSkills = request('skills'); // Berupa Array dari checkbox
 
+        // 2. Query master data untuk komponen filter drop-down
+        $positions = Jabatan::orderBy('position_name')->get();
+        $roles = Roles::orderBy('role_name')->get();
+        $skills = Skills::orderBy('skill_name')->get();
+
+        // 3. Bangun query filter karyawan
         $members = Members::with([
             'user.role',
-            'jabatan'
+            'jabatan',
+            'skills' // Eager load relasi skills untuk kolom baru di tabel
         ])
-        // 2. TAMBAHKAN LOGIKA SEARCH DI SINI
+        // Filter Pencarian Global Text
         ->when($keyword, function ($query, $keyword) {
-            // Mencari berdasarkan nama member
-            $query->where('member_name', 'like', "%{$keyword}%")
-                  // ATAU mencari berdasarkan nama jabatannya (via relasi)
+            $query->where(function($q) use ($keyword) {
+                $q->where('member_name', 'like', "%{$keyword}%")
                   ->orWhereHas('jabatan', function ($q) use ($keyword) {
-                      // Sesuaikan 'nama_jabatan' dengan kolom di tabel jabatan milikmu
                       $q->where('position_name', 'like', "%{$keyword}%"); 
                   })
-                  // Opsional: ATAU mencari berdasarkan email/username akunnya
                   ->orWhereHas('user', function ($q) use ($keyword) {
                       $q->where('email', 'like', "%{$keyword}%")
                         ->orWhere('username', 'like', "%{$keyword}%");
                   });
+            });
+        })
+        // Filter Berdasarkan Position (Jabatan)
+        ->when($selectedPosition, function ($query, $selectedPosition) {
+            $query->where('id_position', $selectedPosition);
+        })
+        // Filter Berdasarkan Role Akun (User Role)
+        ->when($selectedRole, function ($query, $selectedRole) {
+            $query->whereHas('user', function ($q) use ($selectedRole) {
+                // Asumsi kolom foreign key di tabel users adalah id_role
+                $q->where('id_role', $selectedRole); 
+            });
+        })
+        // Filter Berdasarkan Banyak Skills (Multi-select / Checkbox array)
+        ->when($selectedSkills, function ($query, $selectedSkills) {
+            $query->whereHas('skills', function ($q) use ($selectedSkills) {
+                $q->whereIn('skills.id_skill', $selectedSkills);
+            });
         })
         ->orderBy('member_name')
         ->paginate(10)
-        ->withQueryString(); // Wajib ditambahkan agar keyword search terbawa ke halaman 2, 3, dst.
+        ->withQueryString(); // Memastikan filter dan page state tetap aman di URL
 
-        return view(
-            'members.index',
-            compact('members')
-        );
+        return view('members.index', compact('members', 'positions', 'roles', 'skills'));
     }
 
 public function show(Members $member)

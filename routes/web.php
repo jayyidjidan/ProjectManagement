@@ -20,6 +20,8 @@ use App\Http\Controllers\CheckInController;
 use App\Http\Controllers\TaskActivityController;
 use App\Http\Controllers\SubTaskActivityController;
 
+use App\Http\Controllers\ReportProjectController;
+
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ProjectController;
@@ -478,6 +480,14 @@ Route::middleware([
     )->name(
         'overtimes.reject'
     );
+
+    Route::prefix('reports')->name('reports.')->group(function () {
+    // Halaman UI filter laporan project
+        Route::get('/projects', [ReportProjectController::class, 'index'])->name('projects.index');
+    
+    // Proses generate dan download PDF
+        Route::get('/projects/download', [ReportProjectController::class, 'download'])->name('projects.download');
+    });
 });
 
 /*
