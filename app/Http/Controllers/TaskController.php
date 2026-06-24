@@ -151,12 +151,13 @@ class TaskController extends Controller
     public function show(Task $task)
     {
         $user = auth()->user();
+        $member = $user->member; // Pindahkan ke atas agar bisa dipakai untuk tracking
 
+        // Proteksi akses untuk Role 3 (Member biasa)
         if ($user->id_role == 3) {
-            $member = $user->member;
             $task->load('assignees');
             $assigneeIds = $task->assignees->pluck('id_member')->toArray();
-            $allowed = in_array($member->id_member, $assigneeIds);
+            $allowed = $member ? in_array($member->id_member, $assigneeIds) : false;
 
             abort_unless(
                 $allowed,
@@ -165,6 +166,22 @@ class TaskController extends Controller
             );
         }
 
+        // --- FITUR BARU: Catat/Update waktu user membaca task ini ---
+        if ($member) {
+            \DB::table('task_reads')->updateOrInsert(
+                [
+                    'id_task' => $task->id_task, 
+                    'id_member' => $member->id_member
+                ],
+                [
+                    'last_read_at' => now(), 
+                    'updated_at' => now()
+                ]
+            );
+        }
+        // ------------------------------------------------------------
+
+        // Load semua relasi bawaan untuk halaman detail task
         $task->load([
             'project',
             'priority',

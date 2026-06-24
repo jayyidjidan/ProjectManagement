@@ -40,7 +40,7 @@ class RiwayatOvertime extends Model
     public function member()
     {
         return $this->belongsTo(
-            Member::class,
+            Members::class,
             'id_member',
             'id_member'
         );
@@ -58,7 +58,7 @@ class RiwayatOvertime extends Model
     public function approvedBy()
     {
         return $this->belongsTo(
-            Member::class,
+            Members::class,
             'id_approved_by',
             'id_member'
         );

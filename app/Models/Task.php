@@ -94,4 +94,26 @@ public function subtasks()
             'created_at'
         );
     }
+
+    public function getHasUnreadCommentsAttribute()
+    {
+        $memberId = auth()->user()->member->id_member ?? null;
+        if (!$memberId) return false;
+
+        // Ambil kapan terakhir kali member ini membuka detail task ini
+        $lastRead = \DB::table('task_reads')
+            ->where('id_task', $this->id_task)
+            ->where('id_member', $memberId)
+            ->value('last_read_at');
+
+        // Cek apakah ada activity baru bertipe "Comment" (id_type = 1)
+        return \DB::table('task_activities')
+            ->where('id_task', $this->id_task)
+            ->where('id_type', 1) // 1 = Comment sesuai isi tabel activity_types kamu
+            ->where('id_member', '!=', $memberId) // Kecualikan komen dari diri sendiri
+            ->when($lastRead, function($query) use ($lastRead) {
+                $query->where('created_at', '>', $lastRead);
+            })
+            ->exists();
+    }
 }

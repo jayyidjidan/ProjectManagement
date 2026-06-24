@@ -78,12 +78,28 @@
                         
                         {{-- TASK NAME --}}
                         <td class="p-4">
-                            <input
-                                type="text"
-                                value="{{ $task->nama_task }}"
-                                data-id="{{ $task->id_task }}"
-                                data-field="nama_task"
-                                class="inline-edit w-full bg-transparent border-none focus:ring-0 focus:border-b">
+                            <div class="flex items-center gap-2">
+                                <!-- Input Inline Edit Bawaan Kamu -->
+                                <input
+                                    type="text"
+                                    value="{{ $task->nama_task }}"
+                                    data-id="{{ $task->id_task }}"
+                                    data-field="nama_task"
+                                    class="inline-edit w-full bg-transparent border-none focus:ring-0 focus:border-b">
+
+                                <!-- Indikator Komen Belum Dibaca -->
+                                @if($task->has_unread_comments)
+                                    <div class="relative flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white shrink-0" title="Ada komentar baru">
+                                        <!-- Efek berdenyut (ping) ala Messenger -->
+                                        <span class="absolute inline-flex w-full h-full rounded-full bg-red-400 opacity-75 animate-ping"></span>
+                                        
+                                        <!-- Ikon Chat Kecil -->
+                                        <svg class="w-3 h-3 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                        </svg>
+                                    </div>
+                                @endif
+                            </div>
                         </td>
 
                         {{-- PROJECT --}}
