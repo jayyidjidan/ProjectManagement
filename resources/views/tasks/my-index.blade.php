@@ -2,236 +2,266 @@
 
 @section('content')
 
+{{-- SUCCESS MESSAGE --}}
 @if(session('success'))
-
-<div
-    class="mb-6 p-4 rounded-2xl border border-green-200 bg-green-50 text-green-700">
-
-
-{{ session('success') }}
-
-
+<div class="mb-6 p-4 rounded-2xl border border-green-200 bg-green-50 text-green-700">
+    {{ session('success') }}
 </div>
-
 @endif
 
+{{-- ERROR MESSAGES --}}
+@if($errors->any())
+<div class="mb-6 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-700">
+    <ul class="list-disc pl-5">
+        @foreach($errors->all() as $error)
+            <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
+
+{{-- HEADLINE & FILTERS --}}
 <div class="flex items-end justify-between mb-6">
-
     <div>
-
         <h1 class="text-4xl font-bold">
             My Tasks
         </h1>
-
         <p class="text-gray-500 mt-2">
             Manage your assigned tasks
         </p>
-
     </div>
 
     <div class="flex items-center gap-3">
+        {{-- ADVANCED FILTER DROPDOWN --}}
+        <div class="relative" id="filter-container">
+            <button type="button" onclick="toggleFilterDropdown()" class="px-5 py-2.5 rounded-2xl border border-border bg-white flex items-center gap-2 hover:bg-gray-50 transition text-sm font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                Filters
+            </button>
 
-        {{-- FILTER --}}
-        <form
-            method="GET"
-            class="flex gap-3">
+            <div id="filter-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-border z-50 p-5">
+                <form action="{{ url()->current() }}" method="GET">
+                    {{-- Hidden inputs to preserve state --}}
+                    @if(request('view')) <input type="hidden" name="view" value="{{ request('view') }}"> @endif
 
-            <select
-                name="status"
-                onchange="this.form.submit()"
-                class="rounded-xl border border-border px-4 py-2">
+                    {{-- FILTER PROJECT --}}
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Project</label>
+                        <select name="project" class="w-full rounded-xl border border-border p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-gray-50">
+                            <option value="">All Projects</option>
+                            @foreach($projects ?? [] as $p)
+                                <option value="{{ $p->id_proyek }}" @selected(request('project') == $p->id_proyek)>
+                                    {{ $p->nama_proyek }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                <option value="">
-                    All Status
-                </option>
+                    {{-- FILTER STATUS --}}
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select name="status" class="w-full rounded-xl border border-border p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-gray-50">
+                            <option value="">All Status</option>
+                            @foreach($statuses ?? [] as $s)
+                                <option value="{{ $s->status_name }}" @selected(request('status') == $s->status_name)>
+                                    {{ $s->status_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                <option
-                    value="Planning"
-                    @selected(request('status') == 'Planning')>
+                    {{-- SORTING --}}
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                        <select name="sort" class="w-full rounded-xl border border-border p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-gray-50">
+                            <option value="nama_task" @selected(request('sort') == 'nama_task')>Task Name</option>
+                            <option value="deadline_task" @selected(request('sort') == 'deadline_task')>Deadline</option>
+                            <option value="created_at" @selected(request('sort') == 'created_at')>Created Date</option>
+                        </select>
+                    </div>
 
-                    Planning
+                    {{-- ACTION BUTTONS --}}
+                    <div class="flex items-center justify-between mt-6">
+                        <a href="{{ url()->current() }}" class="text-sm text-gray-500 hover:text-gray-800 underline">
+                            Clear Filter
+                        </a>
+                        <button type="submit" class="px-5 py-2.5 bg-black text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition">
+                            Apply Filter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
-                </option>
+{{-- VIEW TOGGLE (LIST VS KANBAN) --}}
+<div class="flex items-center gap-2 mb-6 bg-gray-100 p-1.5 rounded-xl w-max border border-gray-200">
+    <a href="{{ request()->fullUrlWithQuery(['view' => 'list']) }}" 
+       class="px-5 py-2 rounded-lg text-sm font-medium transition {{ request('view', 'list') === 'list' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black' }}">
+        List View
+    </a>
+    <a href="{{ request()->fullUrlWithQuery(['view' => 'kanban']) }}" 
+       class="px-5 py-2 rounded-lg text-sm font-medium transition {{ request('view') === 'kanban' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black' }}">
+        Kanban Board
+    </a>
+</div>
 
-                <option
-                    value="On Going"
-                    @selected(request('status') == 'On Going')>
+{{-- LOGIC: KANBAN VS LIST VIEW --}}
+@if(request('view') === 'kanban')
 
-                    On Going
+    {{-- ==================== KANBAN VIEW ==================== --}}
+    <div class="flex overflow-x-auto gap-6 pb-6 items-start h-[calc(100vh-250px)]">
+        
+        {{-- Column: Planning --}}
+        <div class="w-80 flex-shrink-0 bg-gray-50 rounded-2xl p-4 flex flex-col max-h-full border border-border">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-yellow-400"></span> Planning
+                </h3>
+                <span class="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-md font-bold">{{ $planning->count() }}</span>
+            </div>
+            <div class="overflow-y-auto flex-1 space-y-3 pr-1">
+                @foreach($planning as $task)
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm cursor-grab hover:border-gray-400 transition">
+                        <p class="font-semibold text-gray-800 text-sm mb-1">{{ $task->nama_task }}</p>
+                        <p class="text-xs text-gray-500 mb-3">{{ $task->project->nama_proyek ?? 'No Project' }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </div>
 
-                </option>
+        {{-- Column: On Going --}}
+        <div class="w-80 flex-shrink-0 bg-gray-50 rounded-2xl p-4 flex flex-col max-h-full border border-border">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-blue-400"></span> On Going
+                </h3>
+                <span class="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-md font-bold">{{ $ongoing->count() }}</span>
+            </div>
+            <div class="overflow-y-auto flex-1 space-y-3 pr-1">
+                @foreach($ongoing as $task)
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm cursor-grab hover:border-gray-400 transition">
+                        <p class="font-semibold text-gray-800 text-sm mb-1">{{ $task->nama_task }}</p>
+                        <p class="text-xs text-gray-500 mb-3">{{ $task->project->nama_proyek ?? 'No Project' }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </div>
 
-                <option
-                    value="Reviewed"
-                    @selected(request('status') == 'Reviewed')>
+        {{-- Column: Reviewed --}}
+        <div class="w-80 flex-shrink-0 bg-gray-50 rounded-2xl p-4 flex flex-col max-h-full border border-border">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-purple-400"></span> Reviewed
+                </h3>
+                <span class="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-md font-bold">{{ $reviewed->count() }}</span>
+            </div>
+            <div class="overflow-y-auto flex-1 space-y-3 pr-1">
+                @foreach($reviewed as $task)
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm cursor-grab hover:border-gray-400 transition">
+                        <p class="font-semibold text-gray-800 text-sm mb-1">{{ $task->nama_task }}</p>
+                        <p class="text-xs text-gray-500 mb-3">{{ $task->project->nama_proyek ?? 'No Project' }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </div>
 
-                    Reviewed
-
-                </option>
-
-                <option
-                    value="Finished"
-                    @selected(request('status') == 'Finished')>
-
-                    Finished
-
-                </option>
-
-                <option
-                    value="Canceled"
-                    @selected(request('status') == 'Canceled')>
-
-                    Canceled
-
-                </option>
-
-            </select>
-
-            {{-- SORT --}}
-            <select
-                name="sort"
-                onchange="this.form.submit()"
-                class="rounded-xl border border-border px-4 py-2">
-
-                <option
-                    value="nama_task"
-                    @selected(request('sort') == 'nama_task')>
-
-                    Task Name
-
-                </option>
-
-                <option
-                    value="deadline_task"
-                    @selected(request('sort') == 'deadline_task')>
-
-                    Deadline
-
-                </option>
-
-                <option
-                    value="created_at"
-                    @selected(request('sort') == 'created_at')>
-
-                    Created Date
-
-                </option>
-
-            </select>
-
-        </form>
+        {{-- Column: Finished --}}
+        <div class="w-80 flex-shrink-0 bg-gray-50 rounded-2xl p-4 flex flex-col max-h-full border border-border">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-green-400"></span> Finished
+                </h3>
+                <span class="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-md font-bold">{{ $finished->count() }}</span>
+            </div>
+            <div class="overflow-y-auto flex-1 space-y-3 pr-1">
+                @foreach($finished as $task)
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm cursor-grab hover:border-gray-400 transition">
+                        <p class="font-semibold text-gray-800 text-sm mb-1">{{ $task->nama_task }}</p>
+                        <p class="text-xs text-gray-500 mb-3">{{ $task->project->nama_proyek ?? 'No Project' }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </div>
 
     </div>
 
-</div>
+@else
 
-{{-- SUMMARY CARDS --}}
+    {{-- ==================== LIST VIEW ==================== --}}
+    
+    {{-- SUMMARY CARDS (Clickable with hover effects) --}}
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        
+        <a href="{{ request()->fullUrlWithQuery(['status' => null]) }}" class="block transition hover:-translate-y-1 hover:shadow-lg">
+            <x-card>
+                <p class="text-gray-500 text-sm">Total Tasks</p>
+                <h2 class="text-3xl font-bold mt-2">
+                    {{ $planning->count() + $ongoing->count() + $reviewed->count() + $finished->count() + $canceled->count() }}
+                </h2>
+            </x-card>
+        </a>
 
-<div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <a href="{{ request()->fullUrlWithQuery(['status' => 'Planning']) }}" class="block transition hover:-translate-y-1 hover:shadow-lg {{ request('status') == 'Planning' ? 'ring-2 ring-yellow-500 rounded-xl' : '' }}">
+            <x-card>
+                <p class="text-gray-500 text-sm">Planning</p>
+                <h2 class="text-3xl font-bold text-yellow-600 mt-2">{{ $planning->count() }}</h2>
+            </x-card>
+        </a>
 
+        <a href="{{ request()->fullUrlWithQuery(['status' => 'On Going']) }}" class="block transition hover:-translate-y-1 hover:shadow-lg {{ request('status') == 'On Going' ? 'ring-2 ring-blue-500 rounded-xl' : '' }}">
+            <x-card>
+                <p class="text-gray-500 text-sm">On Going</p>
+                <h2 class="text-3xl font-bold text-blue-600 mt-2">{{ $ongoing->count() }}</h2>
+            </x-card>
+        </a>
 
-<x-card>
-    <p class="text-gray-500 text-sm">
-        Total Tasks
-    </p>
+        <a href="{{ request()->fullUrlWithQuery(['status' => 'Reviewed']) }}" class="block transition hover:-translate-y-1 hover:shadow-lg {{ request('status') == 'Reviewed' ? 'ring-2 ring-purple-500 rounded-xl' : '' }}">
+            <x-card>
+                <p class="text-gray-500 text-sm">Reviewed</p>
+                <h2 class="text-3xl font-bold text-purple-600 mt-2">{{ $reviewed->count() }}</h2>
+            </x-card>
+        </a>
 
-    <h2 class="text-3xl font-bold mt-2">
-        {{
-            $planning->count()
-            + $ongoing->count()
-            + $reviewed->count()
-            + $finished->count()
-            + $canceled->count()
-        }}
-    </h2>
-</x-card>
+        <a href="{{ request()->fullUrlWithQuery(['status' => 'Finished']) }}" class="block transition hover:-translate-y-1 hover:shadow-lg {{ request('status') == 'Finished' ? 'ring-2 ring-green-500 rounded-xl' : '' }}">
+            <x-card>
+                <p class="text-gray-500 text-sm">Finished</p>
+                <h2 class="text-3xl font-bold text-green-600 mt-2">{{ $finished->count() }}</h2>
+            </x-card>
+        </a>
 
-<x-card>
-    <p class="text-gray-500 text-sm">
-        Planning
-    </p>
+    </div>
 
-    <h2 class="text-3xl font-bold text-yellow-600 mt-2">
-        {{ $planning->count() }}
-    </h2>
-</x-card>
+    {{-- TABLES USING YOUR SPECIFIC MY-STATUS-TABLE INCLUDES --}}
+    @include('tasks.partials.my-status-table', ['title' => 'Planning', 'tasks' => $planning, 'projects' => $projects ?? [], 'priorities' => $priorities ?? [], 'statuses' => $statuses ?? []])
+    
+    @include('tasks.partials.my-status-table', ['title' => 'On Going', 'tasks' => $ongoing, 'projects' => $projects ?? [], 'priorities' => $priorities ?? [], 'statuses' => $statuses ?? []])
+    
+    @include('tasks.partials.my-status-table', ['title' => 'Reviewed', 'tasks' => $reviewed, 'projects' => $projects ?? [], 'priorities' => $priorities ?? [], 'statuses' => $statuses ?? []])
+    
+    @include('tasks.partials.my-status-table', ['title' => 'Finished', 'tasks' => $finished, 'projects' => $projects ?? [], 'priorities' => $priorities ?? [], 'statuses' => $statuses ?? []])
+    
+    @include('tasks.partials.my-status-table', ['title' => 'Canceled', 'tasks' => $canceled, 'projects' => $projects ?? [], 'priorities' => $priorities ?? [], 'statuses' => $statuses ?? []])
 
-<x-card>
-    <p class="text-gray-500 text-sm">
-        On Going
-    </p>
+@endif
 
-    <h2 class="text-3xl font-bold text-blue-600 mt-2">
-        {{ $ongoing->count() }}
-    </h2>
-</x-card>
+{{-- JAVASCRIPT FOR DROPDOWN --}}
+<script>
+    function toggleFilterDropdown() {
+        const dropdown = document.getElementById('filter-dropdown');
+        dropdown.classList.toggle('hidden');
+    }
 
-<x-card>
-    <p class="text-gray-500 text-sm">
-        Reviewed
-    </p>
-
-    <h2 class="text-3xl font-bold text-purple-600 mt-2">
-        {{ $reviewed->count() }}
-    </h2>
-</x-card>
-
-<x-card>
-    <p class="text-gray-500 text-sm">
-        Finished
-    </p>
-
-    <h2 class="text-3xl font-bold text-green-600 mt-2">
-        {{ $finished->count() }}
-    </h2>
-</x-card>
-
-
-</div>
-
-{{-- PLANNING --}}
-@include('tasks.partials.my-status-table', [
-    'title' => 'Planning',
-    'tasks' => $planning,
-    'projects' => $projects,
-    'priorities' => $priorities,
-    'statuses' => $statuses,
-])
-
-{{-- ON GOING --}}
-@include('tasks.partials.my-status-table', [
-    'title' => 'On Going',
-    'tasks' => $ongoing,
-    'projects' => $projects,
-    'priorities' => $priorities,
-    'statuses' => $statuses,
-])
-
-{{-- REVIEWED --}}
-@include('tasks.partials.my-status-table', [
-    'title' => 'Reviewed',
-    'tasks' => $reviewed,
-    'projects' => $projects,
-    'priorities' => $priorities,
-    'statuses' => $statuses,
-])
-
-{{-- FINISHED --}}
-@include('tasks.partials.my-status-table', [
-    'title' => 'Finished',
-    'tasks' => $finished,
-    'projects' => $projects,
-    'priorities' => $priorities,
-    'statuses' => $statuses,
-])
-
-{{-- CANCELED --}}
-@include('tasks.partials.my-status-table', [
-    'title' => 'Canceled',
-    'tasks' => $canceled,
-    'projects' => $projects,
-    'priorities' => $priorities,
-    'statuses' => $statuses,
-])
+    // Close the dropdown if the user clicks outside of it
+    window.addEventListener('click', function(e) {
+        const filterContainer = document.getElementById('filter-container');
+        if (filterContainer && !filterContainer.contains(e.target)) {
+            document.getElementById('filter-dropdown').classList.add('hidden');
+        }
+    });
+</script>
 
 @endsection
