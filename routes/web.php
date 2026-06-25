@@ -19,6 +19,7 @@ use App\Http\Controllers\MasterData\ActivityTypeController;
 use App\Http\Controllers\CheckInController;
 use App\Http\Controllers\TaskActivityController;
 use App\Http\Controllers\SubTaskActivityController;
+use App\Http\Controllers\DashboardController;
 
 use App\Http\Controllers\ReportProjectController;
 
@@ -43,6 +44,11 @@ use App\Http\Controllers\ChatController;
 | Guest Routes
 |--------------------------------------------------------------------------
 */
+
+// TAMBAHKAN KODE INI
+Route::get('/', function () {
+    return redirect()->route('login');
+});
 
 Route::post(
     '/scrum/start-from-login',
@@ -184,14 +190,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/subtasks/{subtask}',[SubtaskController::class, 'show'])
         ->name('subtasks.show')
         ->where('subtask', '[0-9]+');
-
-
-    Route::get(
-        '/',
-        function () {
-            return view('dashboard');
-        }
-    )->name('dashboard');
 });
 
 /*
@@ -488,6 +486,8 @@ Route::middleware([
     // Proses generate dan download PDF
         Route::get('/projects/download', [ReportProjectController::class, 'download'])->name('projects.download');
     });
+
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 });
 
 /*

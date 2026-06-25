@@ -8,11 +8,10 @@ use Illuminate\Support\Facades\Hash;
 
 class ProfileController extends Controller
 {
-    
+
 public function show()
 {
-    $member =
-        auth()->user()
+    $member = auth()->user()
         ->member()
         ->with([
             'user.role',
@@ -24,46 +23,53 @@ public function show()
         ])
         ->first();
 
-    $monthlyAttendance =
-        $member
+    $monthlyAttendance = $member
         ?->attendances()
-        ->whereMonth(
-            'tanggal',
-            now()->month
-        )
-        ->whereYear(
-            'tanggal',
-            now()->year
-        )
+        ->whereMonth('tanggal', now()->month)
+        ->whereYear('tanggal', now()->year)
         ->count() ?? 0;
 
-    $tasks =
-        \App\Models\Task::with([
+    // --- TAMBAHAN BARU: SUM OVERTIME BULAN INI ---
+    $monthlyOvertime = $member
+        ?->overtimes()
+        ->whereMonth('tanggal', now()->month)
+        ->whereYear('tanggal', now()->year)
+        ->sum('durasi_jam') ?? 0; // Ganti 'duration' dengan nama kolom total jam lemburnya
+
+    $tasks = \App\Models\Task::with([
             'project',
             'status',
             'priority'
         ])
-        ->whereHas(
-            'assignees',
-            function ($query) use ($member) {
-
-                $query->where(
-                    'members.id_member',
-                    $member->id_member
-                );
-
-            }
-        )
+        ->whereHas('assignees', function ($query) use ($member) {
+            $query->where('members.id_member', $member->id_member);
+        })
         ->get();
 
-    return view(
-        'profile.show',
-        compact(
-            'member',
-            'monthlyAttendance',
-            'tasks'
-        )
+    // Mengelompokkan task berdasarkan status
+    $planning = $tasks->filter(fn($task) => strtolower($task->status?->status_name) === 'planning');
+    $ongoing  = $tasks->filter(fn($task) => strtolower($task->status?->status_name) === 'on going' || strtolower($task->status?->status_name) === 'ongoing');
+    $reviewed = $tasks->filter(fn($task) => strtolower($task->status?->status_name) === 'reviewed');
+    $finished = $tasks->filter(fn($task) => strtolower($task->status?->status_name) === 'finished');
+    
+    // Filter untuk task yang melewati tenggat waktu (Overdue)
+    $overdue  = $tasks->filter(fn($task) => 
+        strtolower($task->status?->status_name) !== 'finished' && 
+        $task->deadline_task && 
+        \Carbon\Carbon::parse($task->deadline_task)->isPast()
     );
+
+    return view('profile.show', compact(
+        'member',
+        'monthlyAttendance',
+        'monthlyOvertime',
+        'tasks',
+        'planning',
+        'ongoing',
+        'reviewed',
+        'finished',
+        'overdue'
+    ));
 }
 
     public function edit()

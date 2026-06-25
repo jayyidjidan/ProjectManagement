@@ -85,24 +85,33 @@ public function show(Members $member)
         ->latest()
         ->get();
 
-    // Mengelompokkan task berdasarkan status (case-insensitive / pastikan string sesuai dengan database Anda)
-    // Ubah string 'Planning', 'On Going', dll. jika di database Anda namanya berbeda
+    // Mengelompokkan task berdasarkan status
     $planning = $tasks->filter(fn($task) => strtolower($task->status?->status_name) === 'planning');
     $ongoing  = $tasks->filter(fn($task) => strtolower($task->status?->status_name) === 'on going' || strtolower($task->status?->status_name) === 'ongoing');
     $reviewed = $tasks->filter(fn($task) => strtolower($task->status?->status_name) === 'reviewed');
     $finished = $tasks->filter(fn($task) => strtolower($task->status?->status_name) === 'finished');
     $canceled = $tasks->filter(fn($task) => strtolower($task->status?->status_name) === 'canceled');
     
-    // Untuk Overdue, kita filter yang statusnya bukan finished dan tanggal deadline-nya sudah lewat dari hari ini
+    // Untuk Overdue
     $overdue  = $tasks->filter(fn($task) => 
         strtolower($task->status?->status_name) !== 'finished' && 
         $task->deadline_task && 
         \Carbon\Carbon::parse($task->deadline_task)->isPast()
     );
 
+    // Hitung Jumlah Absensi Bulan Ini
     $monthlyAttendance = $member->attendances()
         ->whereMonth('tanggal', now()->month)
         ->count();
+
+    // --- FITUR BARU: Hitung Total Durasi Overtime Bulan Ini ---
+    // Opsi A: Jika durasi lembur dicatat di relasi khusus overtimes()
+    $monthlyOvertime = $member->overtimes()
+        ->whereMonth('tanggal', now()->month) // Sesuaikan nama kolom tanggal jika bukan 'tanggal'
+        ->sum('durasi_jam'); // SILAKAN GANTI 'duration' dengan nama kolom durasimu (misal: 'total_jam')
+
+    // Opsi B: JIKA durasi lembur ternyata digabung di dalam tabel attendances, gunakan ini:
+    // $monthlyOvertime = $member->attendances()->whereMonth('tanggal', now()->month)->sum('overtime_hours');
 
     return view('members.show', compact(
         'member',
@@ -113,7 +122,8 @@ public function show(Members $member)
         'finished',
         'canceled',
         'overdue',
-        'monthlyAttendance'
+        'monthlyAttendance',
+        'monthlyOvertime' // Kita lempar variabel baru ini ke blade
     ));
 }
 

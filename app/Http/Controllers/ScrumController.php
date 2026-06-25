@@ -17,7 +17,7 @@ class ScrumController extends Controller
         $keyword = request('q');
 
         $scrums = Scrum::with('responsible')
-            // 2. TAMBAHKAN LOGIKA SEARCH DI SINI
+            // 2. Logika Search
             ->when($keyword, function ($query, $keyword) {
                 // Mencari berdasarkan kolom 'day' (hari) di tabel scrums
                 return $query->where('day', 'like', "%{$keyword}%")
@@ -35,7 +35,10 @@ class ScrumController extends Controller
 
     public function create()
     {
-        $members = Members::orderBy('member_name')->get();
+        // FILTER: Kecualikan Superadmin (id_role = 1)
+        $members = Members::whereHas('user', function ($query) {
+            $query->where('id_role', '!=', 1);
+        })->orderBy('member_name')->get();
 
         return view('scrums.create', compact('members'));
     }
@@ -82,7 +85,11 @@ class ScrumController extends Controller
             'updates.task2'
         ]);
 
-        $members = Members::orderBy('member_name')->get();
+        // FILTER: Kecualikan Superadmin (id_role = 1)
+        $members = Members::whereHas('user', function ($query) {
+            $query->where('id_role', '!=', 1);
+        })->orderBy('member_name')->get();
+        
         $tasks = Task::with('assignees')->orderBy('nama_task')->get();
         $statuses = StatusMembers::orderBy('status_name')->get();
 
@@ -110,7 +117,11 @@ class ScrumController extends Controller
             ['day' => now()->translatedFormat('l')]
         );
 
-        $members = Members::all();
+        // FILTER: Kecualikan Superadmin (id_role = 1)
+        $members = Members::whereHas('user', function ($query) {
+            $query->where('id_role', '!=', 1);
+        })->orderBy('member_name')->get();
+        
         $tasks = Task::all();
         $statuses = StatusMembers::all();
 
@@ -152,7 +163,11 @@ class ScrumController extends Controller
 
     public function showGuest(Scrum $scrum)
     {
-        $members = Members::all();
+        // FILTER: Kecualikan Superadmin (id_role = 1)
+        $members = Members::whereHas('user', function ($query) {
+            $query->where('id_role', '!=', 1);
+        })->orderBy('member_name')->get();
+
         $statuses = StatusMembers::all();
         
         $tasks = Task::with('assignees')
