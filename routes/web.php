@@ -164,6 +164,8 @@ Route::middleware('auth')->group(function () {
         'profile.password.update'
     );
 
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
 });
 
 /*
@@ -486,8 +488,6 @@ Route::middleware([
     // Proses generate dan download PDF
         Route::get('/projects/download', [ReportProjectController::class, 'download'])->name('projects.download');
     });
-
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 });
 
 /*

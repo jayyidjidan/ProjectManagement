@@ -10,52 +10,47 @@ use Stringable;
 
 class GetTask implements Tool
 {
-    /**
-     * Get the description of the tool's purpose.
-     */
     public function description(): Stringable|string
     {
-        return 'Mengambil daftar task milik user yang sedang login';
+        return 'Mengambil daftar semua task beserta deadline yang ditugaskan kepada user yang sedang login. ' .
+               'Gunakan tool ini setiap kali user bertanya tentang task saya, daftar tugas, pekerjaan saya, deadline, atau tugas yang diberikan.';
     }
 
-    /**
-     * Execute the tool.
-     */
     public function handle(Request $request): Stringable|string
     {
         $user = auth()->user();
 
         if (!$user || !$user->member) {
-            return 'Member tidak ditemukan';
+            return 'Member tidak ditemukan. Pastikan Anda sudah login.';
         }
 
         $tasks = Task::query()
-            ->whereHas(
-                'assignees',
-                fn ($q) =>
-                    $q->where(
-                        'members.id_member',
-                        $user->member->id_member
-                    )
+            ->whereHas('assignees', fn($q) => 
+                $q->where('members.id_member', $user->member->id_member)
             )
+            ->with('project') // optional, untuk info project
             ->get();
 
         if ($tasks->isEmpty()) {
-            return 'Tidak ada task yang ditugaskan';
+            return 'Anda saat ini tidak memiliki task yang ditugaskan.';
         }
 
-        return $tasks
-            ->map(function ($task) {
-                return "- {$task->nama_task}";
-            })
-            ->implode("\n");
+        return $tasks->map(function ($task) {
+            $deadline = $task->deadline_task
+                ? \Carbon\Carbon::parse($task->deadline_task)->format('d M Y') 
+                : 'Tidak ada deadline';
+
+            $project = $task->project?->nama_project ?? 'Tidak ada project';
+
+            return "- {$task->nama_task} (Project: {$project}, Deadline: {$deadline})";
+        })->implode("\n");
     }
 
     /**
-     * Get the tool's schema definition.
+     * Empty schema = no parameters needed
      */
     public function schema(JsonSchema $schema): array
     {
-        return [];
+        return [];   // ← This is the key fix
     }
 }

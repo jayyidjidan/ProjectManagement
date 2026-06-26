@@ -3,105 +3,63 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\Jabatan;
+use App\Models\StatusMembers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class AttendanceController extends Controller
 {
-    public function index(
-        Request $request
-    )
+    public function index(Request $request)
     {
-        $selectedDate =
-            $request->date
-            ??
-            now()->toDateString();
+        $selectedDate = $request->date ?? now()->toDateString();
 
-        $attendances =
-            Attendance::with([
-                'member.jabatan',
-                'status'
-            ])
-            ->whereDate(
-                'tanggal',
-                $selectedDate
-            )
-            ->orderBy(
-                'id_attendance',
-                'asc'
-            )
-            ->get();
+        // 1. Ubah query Attendance menjadi instance builder agar bisa difilter
+        $query = Attendance::with(['member.jabatan', 'status'])
+            ->whereDate('tanggal', $selectedDate);
 
-        $currentDate =
-            Carbon::parse(
-                $selectedDate
-            );
+        // 2. Tambahkan logika filter Position
+        if ($request->filled('position')) {
+            $query->whereHas('member', function ($q) use ($request) {
+                $q->where('id_position', $request->position);
+            });
+        }
 
-        $previousDate =
-            $currentDate
-            ->copy()
-            ->subDay()
-            ->toDateString();
+        // 3. Tambahkan logika filter Status
+        if ($request->filled('status')) {
+            $query->where('id_status', $request->status);
+        }
 
-        $nextDate =
-            $currentDate
-            ->copy()
-            ->addDay()
-            ->toDateString();
+        // 4. Eksekusi query
+        $attendances = $query->orderBy('id_attendance', 'asc')->get();
 
-        $today =
-            now()->toDateString();
+        $currentDate = Carbon::parse($selectedDate);
+        $previousDate = $currentDate->copy()->subDay()->toDateString();
+        $nextDate = $currentDate->copy()->addDay()->toDateString();
+        $today = now()->toDateString();
 
-        $hadir =
-            $attendances
-            ->filter(
-                fn($a) =>
-                $a->status?->status_name
-                === 'Hadir'
-            )
-            ->count();
+        $hadir = $attendances->filter(fn($a) => $a->status?->status_name === 'Hadir')->count();
+        $wfh = $attendances->filter(fn($a) => $a->status?->status_name === 'WFH')->count();
+        $cuti = $attendances->filter(fn($a) => $a->status?->status_name === 'Cuti')->count();
+        $tanpaKeterangan = $attendances->filter(fn($a) => $a->status?->status_name === 'Tanpa Keterangan')->count();
 
-        $wfh =
-            $attendances
-            ->filter(
-                fn($a) =>
-                $a->status?->status_name
-                === 'WFH'
-            )
-            ->count();
+        // 5. Ambil data Position dan Status untuk dikirim ke Dropdown Filter
+        $positions = Jabatan::all();
+        $statuses = StatusMembers::all();
 
-        $cuti =
-            $attendances
-            ->filter(
-                fn($a) =>
-                $a->status?->status_name
-                === 'Cuti'
-            )
-            ->count();
-
-        $tanpaKeterangan =
-            $attendances
-            ->filter(
-                fn($a) =>
-                $a->status?->status_name
-                === 'Tanpa Keterangan'
-            )
-            ->count();
-
-        return view(
-            'attendances.index',
-            compact(
-                'attendances',
-                'selectedDate',
-                'previousDate',
-                'nextDate',
-                'today',
-                'hadir',
-                'wfh',
-                'cuti',
-                'tanpaKeterangan'
-            )
-        );
+        return view('attendances.index', compact(
+            'attendances',
+            'selectedDate',
+            'previousDate',
+            'nextDate',
+            'today',
+            'hadir',
+            'wfh',
+            'cuti',
+            'tanpaKeterangan',
+            'positions', // Kirim ke view
+            'statuses'   // Kirim ke view
+        ));
     }
 
     public function myAttendance(

@@ -14,23 +14,78 @@ class DashboardController extends Controller
     public function index()
     {
         $user = auth()->user();
+        $today = Carbon::today()->toDateString();
 
-        // JIKA YANG LOGIN ADALAH MEMBER (id_role = 3), DIALIHKAN KE HALAMAN PROFILE
+        // ====================================================================
+        // LOGIKA KHUSUS MEMBER (id_role = 3)
+        // ====================================================================
         if ($user && $user->id_role == 3) {
-            return redirect()->route('profile.show');
+            if (!$user->member) {
+                abort(403, 'Profil member Anda belum terdaftar di sistem.');
+            }
+
+            $memberId = $user->member->id_member;
+
+            // 1. Total Task milik Member
+            $totalTasks = Task::whereHas('assignees', function($q) use ($memberId) {
+                $q->where('members.id_member', $memberId);
+            })->count();
+
+            // 2. Overdue Task (Deadline terlewat & status belum selesai/finished)
+            $overdueTasks = Task::whereHas('assignees', function($q) use ($memberId) {
+                $q->where('members.id_member', $memberId);
+            })
+            ->where('deadline_task', '<', $today)
+            ->whereHas('status', function($query) {
+                $query->where('status_name', '!=', 'Finished')->where('status_name', '!=', 'Selesai');
+            })
+            ->count();
+
+            // 3. Upcoming Deadline Task (Deadline dalam 7 hari ke depan & belum selesai)
+            $upcomingTasks = Task::whereHas('assignees', function($q) use ($memberId) {
+                $q->where('members.id_member', $memberId);
+            })
+            ->where('deadline_task', '>=', $today)
+            ->where('deadline_task', '<=', Carbon::today()->addDays(7)->toDateString())
+            ->whereHas('status', function($query) {
+                $query->where('status_name', '!=', 'Finished')->where('status_name', '!=', 'Selesai');
+            })
+            ->count();
+
+            // 4. Total Work Hour (Menggunakan kolom work_hours dari tabel attendances)
+            $totalWorkHours = Attendance::where('id_member', $memberId)->sum('work_hours') ?? 0;
+
+            // 5. Work Hour Graphic (Data absensi jam kerja 7 hari terakhir)
+            $graphicData = Attendance::where('id_member', $memberId)
+                ->where('tanggal', '>=', Carbon::today()->subDays(7)->toDateString())
+                ->orderBy('tanggal', 'asc')
+                ->get(['tanggal', 'work_hours']);
+
+            $chartLabels = $graphicData->pluck('tanggal')->map(fn($date) => Carbon::parse($date)->format('d M'))->toArray();
+            $chartDataMember = $graphicData->pluck('work_hours')->toArray();
+
+            // Return ke view khusus dashboard member
+            return view('dashboard.member', compact(
+                'totalTasks',
+                'overdueTasks',
+                'upcomingTasks',
+                'totalWorkHours',
+                'chartLabels',
+                'chartDataMember'
+            ));
         }
 
-        // --- PROSES UNTUK SUPERADMIN & PROJECT MANAGER ---
-
-        // 1. Total Proyek (Menggantikan Revenue karena tidak ada kolom budget di tabel proyeks)
+        // ====================================================================
+        // LOGIKA UNTUK SUPERADMIN & PROJECT MANAGER (id_role = 1, 2)
+        // ====================================================================
+        
+        // 1. Total Proyek
         $totalProjects = Proyeks::count('id_proyek') ?? 0;
 
-        // 2. Total Klien Unik dari tabel proyeks
+        // 2. Total Klien Unik
         $totalClients = Proyeks::distinct('id_klien')->count('id_klien') ?? 0;
 
-        // 3. Attendance Hari Ini (menggunakan kolom 'tanggal')
-        $today = Carbon::today()->toDateString();
-        
+        // 3. Attendance Hari Ini
         $attendanceToday = Attendance::with(['member', 'status'])
             ->whereDate('tanggal', $today)
             ->get();
@@ -49,12 +104,10 @@ class DashboardController extends Controller
         $chartLabels = $projectsMonthly->pluck('month')->toArray();
         $chartData = $projectsMonthly->pluck('total')->toArray();
 
-        // 5. Task yang mendekati deadline (5 hari)
+        // 5. Task mendakati deadline (5 hari)
         $upcomingDeadlines = Task::with(['project', 'status'])
             ->where('deadline_task', '>=', $today)
             ->where('deadline_task', '<=', Carbon::today()->addDays(5)->toDateString())
-            // Mengecualikan yang sudah selesai (Asumsi di tabel status_tasks namanya 'Finished' atau 'Selesai')
-            // Jika memunculkan error, baris whereHas ini bisa dihapus
             ->whereHas('status', function($query) {
                 $query->where('status_name', '!=', 'Finished')->where('status_name', '!=', 'Selesai');
             })

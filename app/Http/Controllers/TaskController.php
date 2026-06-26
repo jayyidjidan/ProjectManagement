@@ -27,10 +27,11 @@ class TaskController extends Controller
         $sort = $request->input('sort', 'created_at');
         $direction = $request->input('direction', 'desc');
         
-        // TANGKAP 3 PARAMETER FILTER BARU DI SINI
+        // TANGKAP 4 PARAMETER FILTER DI SINI (Tambahkan id_member)
         $projectFilter  = $request->input('project'); 
         $statusFilter   = $request->input('status');
         $priorityFilter = $request->input('priority');
+        $memberFilter   = $request->input('id_member'); // <--- TAMBAHAN BARU
         
         $keyword = $request->input('q');
 
@@ -55,6 +56,13 @@ class TaskController extends Controller
             ->when($priorityFilter, function ($query) use ($priorityFilter) {
                 // Filter berdasarkan Priority
                 $query->where('id_priority', $priorityFilter);
+            })
+            ->when($memberFilter, function ($query) use ($memberFilter) { // <--- TAMBAHAN BARU
+                // Filter berdasarkan Member (Relasi 'assignees' di model Task)
+                $query->whereHas('assignees', function ($q) use ($memberFilter) {
+                    // Pakai nama tabel pivot atau tabel master untuk menghindari kolom ambigu
+                    $q->where('asignee_tasks.id_member', $memberFilter); 
+                });
             })
             ->when($keyword, function ($query, $keyword) {
                 return $query->where('nama_task', 'like', "%{$keyword}%");
@@ -82,7 +90,7 @@ class TaskController extends Controller
         return view('tasks.index', compact(
             'planning', 'ongoing', 'reviewed', 'finished', 'canceled', 'overdue', 
             'projects', 'priorities', 'statuses', 'members', 'sort', 'direction',
-            'currentProject'
+            'currentProject', 'memberFilter' // <-- Jangan lupa memberFilter dilempar ke view juga
         ));
     }
 

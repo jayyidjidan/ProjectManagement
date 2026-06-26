@@ -156,47 +156,53 @@
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-            <div class="p-4 border border-border rounded-xl bg-gray-50">
+            {{-- Total Tasks (Bisa diklik, filter by id_member saja) --}}
+            <a href="{{ route('tasks.index', ['id_member' => $member->id_member]) }}" class="block p-4 border border-border rounded-xl bg-gray-50 hover:bg-gray-200 transition-colors cursor-pointer">
                 <p class="text-gray-500 text-sm font-medium">Total Tasks</p>
                 <h2 class="text-3xl font-bold mt-2 text-gray-800">
                     {{ $tasks->count() }}
                 </h2>
-            </div>
+            </a>
 
-            <div class="p-4 border border-border rounded-xl bg-white">
+            {{-- Planning --}}
+            <a href="{{ route('tasks.index', ['id_member' => $member->id_member, 'status' => 'Planning']) }}" class="block p-4 border border-border rounded-xl bg-white hover:bg-yellow-50 transition-colors cursor-pointer">
                 <p class="text-gray-500 text-sm font-medium">Planning</p>
                 <h2 class="text-3xl font-bold text-yellow-600 mt-2">
                     {{ $planning->count() }}
                 </h2>
-            </div>
+            </a>
 
-            <div class="p-4 border border-border rounded-xl bg-white">
+            {{-- On Going --}}
+            <a href="{{ route('tasks.index', ['id_member' => $member->id_member, 'status' => 'On Going']) }}" class="block p-4 border border-border rounded-xl bg-white hover:bg-blue-50 transition-colors cursor-pointer">
                 <p class="text-gray-500 text-sm font-medium">On Going</p>
                 <h2 class="text-3xl font-bold text-blue-600 mt-2">
                     {{ $ongoing->count() }}
                 </h2>
-            </div>
+            </a>
 
-            <div class="p-4 border border-border rounded-xl bg-white">
+            {{-- Reviewed --}}
+            <a href="{{ route('tasks.index', ['id_member' => $member->id_member, 'status' => 'Reviewed']) }}" class="block p-4 border border-border rounded-xl bg-white hover:bg-purple-50 transition-colors cursor-pointer">
                 <p class="text-gray-500 text-sm font-medium">Reviewed</p>
                 <h2 class="text-3xl font-bold text-purple-600 mt-2">
                     {{ $reviewed->count() }}
                 </h2>
-            </div>
+            </a>
 
-            <div class="p-4 border border-border rounded-xl bg-white">
+            {{-- Finished --}}
+            <a href="{{ route('tasks.index', ['id_member' => $member->id_member, 'status' => 'Finished']) }}" class="block p-4 border border-border rounded-xl bg-white hover:bg-green-50 transition-colors cursor-pointer">
                 <p class="text-gray-500 text-sm font-medium">Finished</p>
                 <h2 class="text-3xl font-bold text-green-600 mt-2">
                     {{ $finished->count() }}
                 </h2>
-            </div>
+            </a>
 
-            <div class="p-4 border border-border rounded-xl bg-white">
+            {{-- Overdue --}}
+            <a href="{{ route('tasks.index', ['id_member' => $member->id_member, 'status' => 'Overdue']) }}" class="block p-4 border border-border rounded-xl bg-white hover:bg-red-50 transition-colors cursor-pointer">
                 <p class="text-gray-500 text-sm font-medium">Overdue</p>
                 <h2 class="text-3xl font-bold text-red-600 mt-2">
                     {{ $overdue->count() }}
                 </h2>
-            </div>
+            </a>
         </div>
     </x-card>
 
