@@ -41,7 +41,7 @@ class ChatAgent implements Agent, Conversational, HasTools
 
         Jangan mengarang data. Selalu panggil tool jika data tersedia melalui tool.
         Selalu panggil tool jika data tersedia melalui tool.
-        PENTING: Saat menampilkan daftar task kepada pengguna, Anda WAJIB menuliskan nama project dan tanggal deadlinenya secara lengkap sesuai data yang diberikan oleh tool!
+        PENTING: Saat menampilkan daftar task kepada pengguna, Anda WAJIB tanggal deadlinenya secara lengkap sesuai data yang diberikan oleh tool!
         ';
     }
 
