@@ -70,7 +70,7 @@
                                 name="login"
                                 value="{{ old('login') }}"
                                 placeholder="Masukkan username atau email"
-                                class="w-full rounded-xl border border-border p-3">
+                                class="w-full rounded-xl p-3 border border-gray-200">
 
                         </div>
 
@@ -83,7 +83,7 @@
                             <input
                                 type="password"
                                 name="password"
-                                class="w-full rounded-xl border border-border p-3">
+                                class="w-full rounded-xl p-3 border border-gray-200">
 
                         </div>
 
@@ -110,12 +110,16 @@
                     </div>
 
                     <div class="mt-3">
+                        
+                        <x-button-primary class="w-full">
+                            Login
+                        </x-button-primary>
 
-                        <button
+                        <!-- <button
                             type="submit"
                             class="w-full rounded-xl bg-orange-500 text-white py-3">
                             Login
-                        </button>
+                        </button> -->
 
                     </div>
 
@@ -125,12 +129,9 @@
                             Quick Start for Scrum Meeting
                         </p>
 
-                        <button
-                            type="button"
-                            id="openScrumModal"
-                            class="w-full py-3 rounded-xl bg-gray-200 text-black">
+                        <x-button-secondary type="button" id="openScrumModal" class=" border-orange-500 text-orange-500 w-full">
                             Start Scrum
-                        </button>
+                        </x-button-secondary>
 
                     </div>
 
