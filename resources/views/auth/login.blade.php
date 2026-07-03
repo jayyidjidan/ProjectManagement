@@ -6,13 +6,16 @@
         Login
     </title>
 
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     @vite([
         'resources/css/app.css',
         'resources/js/app.js'
     ])
 </head>
 
-<body class="min-h-screen flex p-0 lg:p-6 back">
+<body class="min-h-screen flex p-0 lg:p-6 bg-[#F9F9F9]">
 
     {{-- Kiri: Background Image --}}
     <div class="hidden lg:flex flex-col justify-between self-stretch items-start p-12  lg:w-2/3 bg-cover bg-center bg-no-repeat rounded-2xl" style="background-image: url('{{ asset('assets/Background.png') }}');">
@@ -24,9 +27,9 @@
     </div>
 
     {{-- Kanan: Form Login --}}
-    <div class="w-full lg:w-1/2 flex items-center justify-center p-8 bg-background">
+    <div class="w-full lg:w-1/2 flex items-center justify-center p-8">
 
-            <x-card class="w-full border-0">
+            <x-card class="w-full border-0 bg-white/0 max-w-3xl">
                 <h1 class="text-5xl w-100 font-bold mb-2 leading-[1.2]">
                     Login To Your Account
                 </h1>
@@ -70,7 +73,7 @@
                                 name="login"
                                 value="{{ old('login') }}"
                                 placeholder="Masukkan username atau email"
-                                class="w-full rounded-xl p-3 border border-gray-200">
+                                class="w-full rounded-xl p-3 border border-gray-200 bg-white">
 
                         </div>
 
@@ -83,7 +86,7 @@
                             <input
                                 type="password"
                                 name="password"
-                                class="w-full rounded-xl p-3 border border-gray-200">
+                                class="w-full rounded-xl p-3 border border-gray-200 bg-white">
 
                         </div>
 
@@ -129,7 +132,7 @@
                             Quick Start for Scrum Meeting
                         </p>
 
-                        <x-button-secondary type="button" id="openScrumModal" class=" border-orange-500 text-orange-500 w-full">
+                        <x-button-secondary type="button" id="openScrumModal" class=" border-orange-500 text-orange-500 w-full bg-white/0 bg-transparent hover:bg-[#FEF1E9]">
                             Start Scrum
                         </x-button-secondary>
 
