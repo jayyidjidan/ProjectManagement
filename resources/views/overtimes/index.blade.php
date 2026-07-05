@@ -3,83 +3,38 @@
 @section('content')
 
 <div class="max-w-5xl mx-auto">
-
     <x-card>
-
         <div class="flex justify-between items-center">
-
             <div>
-
-                <h1 class="text-3xl font-bold mb-2">
-                    Overtime
-                </h1>
-
-                <p class="text-gray-500">
-                    Manage your overtime session
-                </p>
-
+                <h1 class="text-3xl font-bold mb-2">Overtime</h1>
+                <p class="text-gray-500">Manage your overtime session</p>
             </div>
 
             @if($isWeekend)
-
-            <span
-                class="px-4 py-2 rounded-full bg-yellow-100 text-yellow-700 text-sm font-medium">
-
+            <span class="px-4 py-2 rounded-full bg-yellow-100 text-yellow-700 text-sm font-medium">
                 Weekend Overtime
-
             </span>
-
             @endif
-
         </div>
-
     </x-card>
 
     @if(session('success'))
-
-    <div class="mt-4 p-4 rounded-xl bg-green-100 text-green-700">
-
-        {{ session('success') }}
-
-    </div>
-
+    <div class="mt-4 p-4 rounded-xl bg-green-100 text-green-700">{{ session('success') }}</div>
     @endif
 
     @if(session('error'))
-
-    <div class="mt-4 p-4 rounded-xl bg-red-100 text-red-700">
-
-        {{ session('error') }}
-
-    </div>
-
+    <div class="mt-4 p-4 rounded-xl bg-red-100 text-red-700"> {{ session('error') }}</div>
     @endif
 
     <x-card class="mt-6">
-
         <div class="text-center">
-
-            <p class="text-gray-500 mb-2">
-
-                Overtime Duration
-
-            </p>
-
-            <h2
-                id="overtime-timer"
-                class="text-5xl font-bold">
-
-                00:00:00
-
-            </h2>
-
+            <p class="text-gray-500 mb-2">Overtime Duration</p>
+            <h2 id="overtime-timer" class="text-5xl font-bold">00:00:00</h2>
         </div>
-
     </x-card>
 
 
     @if(!$activeOvertime)
-
     <x-card class="mt-6">
 
         <form

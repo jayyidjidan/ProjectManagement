@@ -18,49 +18,25 @@ class OvertimeController extends Controller
     */
     public function index()
     {
-        $member =
-            auth()->user()->member;
+        $member = auth()->user()->member;
 
-        $activeOvertime =
-            RiwayatOvertime::with('task')
-            ->where(
-                'id_member',
-                $member->id_member
-            )
-            ->whereNull(
-                'end_overtime'
-            )
+        $activeOvertime = RiwayatOvertime::with('task')
+            ->where('id_member', $member->id_member)
+            ->whereNull('end_overtime')
             ->latest()
             ->first();
 
-        $tasks =
-            Task::whereHas(
-                'assignees',
-                function ($query) use ($member) {
+        // PERBAIKAN DI SINI: Filter menggunakan id_status != 8 (Finished)
+        $tasks = Task::whereHas('assignees', function ($query) use ($member) {
+                    $query->where('members.id_member', $member->id_member);
+                })
+                ->where('id_status', '!=', 8) // <--- Menggunakan ID 8 untuk status 'Finished'
+                ->orderBy('nama_task')
+                ->get();
 
-                    $query->where(
-                        'members.id_member',
-                        $member->id_member
-                    );
+        $isWeekend = now()->isWeekend();
 
-                }
-            )
-            ->orderBy(
-                'nama_task'
-            )
-            ->get();
-
-        $isWeekend =
-            now()->isWeekend();
-
-        return view(
-            'overtimes.index',
-            compact(
-                'activeOvertime',
-                'tasks',
-                'isWeekend'
-            )
-        );
+        return view('overtimes.index', compact('activeOvertime', 'tasks', 'isWeekend'));
     }
 
     /*
@@ -138,6 +114,26 @@ class OvertimeController extends Controller
                 )
                 ->first();
 
+        }
+
+        /*
+        =====================================
+        VALIDASI WEEKEND VS WEEKDAY
+        =====================================
+        */
+        $isWeekend =
+            now()->isWeekend();
+
+        // Jika HARI KERJA tapi TIDAK ADA ABSENSI, maka tolak.
+        if (
+            !$isWeekend
+            &&
+            !$attendance
+        ) {
+            return back()->with(
+                'error',
+                'Gagal! Pada hari kerja, Anda harus melakukan absensi terlebih dahulu sebelum mengajukan overtime.'
+            );
         }
 
         /*
