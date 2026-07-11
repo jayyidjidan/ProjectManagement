@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Proyeks;
 use App\Models\Task;
 use App\Models\Attendance;
+use App\Models\RiwayatOvertime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -16,9 +17,9 @@ class DashboardController extends Controller
         $user = auth()->user();
         $today = Carbon::today()->toDateString();
 
-        // ====================================================================
+        
         // LOGIKA KHUSUS MEMBER (id_role = 3)
-        // ====================================================================
+        
         if ($user && $user->id_role == 3) {
             if (!$user->member) {
                 abort(403, 'Profil member Anda belum terdaftar di sistem.');
@@ -52,17 +53,49 @@ class DashboardController extends Controller
             })
             ->count();
 
-            // 4. Total Work Hour (Menggunakan kolom work_hours dari tabel attendances)
-            $totalWorkHours = Attendance::where('id_member', $memberId)->sum('work_hours') ?? 0;
+            // 4. Total Work Hours
+            //    = jam absensi (selisih leave_hour - start_hour) + jam overtime yang sudah approved
+            $attendanceHours = Attendance::where('id_member', $memberId)
+                ->whereNotNull('start_hour')
+                ->whereNotNull('leave_hour')
+                ->selectRaw('SUM(TIME_TO_SEC(TIMEDIFF(leave_hour, start_hour))) / 3600 as total_hours')
+                ->value('total_hours') ?? 0;
 
-            // 5. Work Hour Graphic (Data absensi jam kerja 7 hari terakhir)
-            $graphicData = Attendance::where('id_member', $memberId)
-                ->where('tanggal', '>=', Carbon::today()->subDays(7)->toDateString())
-                ->orderBy('tanggal', 'asc')
-                ->get(['tanggal', 'work_hours']);
+            $overtimeHours = RiwayatOvertime::where('id_member', $memberId)
+                ->where('status_approval', 'approved')
+                ->sum('durasi_jam') ?? 0;
 
-            $chartLabels = $graphicData->pluck('tanggal')->map(fn($date) => Carbon::parse($date)->format('d M'))->toArray();
-            $chartDataMember = $graphicData->pluck('work_hours')->toArray();
+            $totalWorkHours = round($attendanceHours + $overtimeHours, 2);
+
+            // 5. Work Hour Graphic (Data jam kerja 7 hari terakhir: absensi + overtime approved)
+            $startDate = Carbon::today()->subDays(6);
+            $endDate   = Carbon::today();
+
+            $attendanceDaily = Attendance::where('id_member', $memberId)
+                ->whereBetween('tanggal', [$startDate->toDateString(), $endDate->toDateString()])
+                ->whereNotNull('start_hour')
+                ->whereNotNull('leave_hour')
+                ->selectRaw('tanggal, SUM(TIME_TO_SEC(TIMEDIFF(leave_hour, start_hour))) / 3600 as hours')
+                ->groupBy('tanggal')
+                ->pluck('hours', 'tanggal');
+
+            $overtimeDaily = RiwayatOvertime::where('id_member', $memberId)
+                ->where('status_approval', 'approved')
+                ->whereBetween('tanggal', [$startDate->toDateString(), $endDate->toDateString()])
+                ->selectRaw('tanggal, SUM(durasi_jam) as hours')
+                ->groupBy('tanggal')
+                ->pluck('hours', 'tanggal');
+
+            $chartLabels = [];
+            $chartDataMember = [];
+
+            for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
+                $dateKey = $date->toDateString();
+                $chartLabels[] = $date->format('d M');
+
+                $hours = (float) ($attendanceDaily[$dateKey] ?? 0) + (float) ($overtimeDaily[$dateKey] ?? 0);
+                $chartDataMember[] = round($hours, 2);
+            }
 
             // Return ke view khusus dashboard member
             return view('dashboard.member', compact(

@@ -397,4 +397,80 @@ class OvertimeController extends Controller
             'Overtime rejected.'
         );
     }
+
+    /*
+|--------------------------------------------------------------------------
+| ALL HISTORY OVERTIME (SUPERADMIN & PM ONLY)
+|--------------------------------------------------------------------------
+*/
+public function allHistory(Request $request)
+{
+    $user = auth()->user();
+
+    // 1. PROTEKSI AKSES: Tolak jika yang login adalah Member biasa (id_role == 3)
+    if ($user->id_role == 3) {
+        abort(403, 'Akses Ditolak: Halaman ini hanya untuk Superadmin dan Project Manager.');
+    }
+
+    // 2. DATE NAVIGATION (mengikuti pola halaman Attendance)
+    $today        = now()->format('Y-m-d');
+    $selectedDate = $request->filled('date') ? $request->date : $today;
+    $previousDate = \Carbon\Carbon::parse($selectedDate)->subDay()->format('Y-m-d');
+    $nextDate     = \Carbon\Carbon::parse($selectedDate)->addDay()->format('Y-m-d');
+
+    // 3. QUERY UTAMA: Ambil data Riwayat Overtime beserta relasi
+    $query = RiwayatOvertime::with([
+        'member',
+        'task.project',
+    ]);
+
+    // 4. FILTER ROLE PM: Jika PM (id_role == 2), hanya tampilkan overtime dari proyeknya
+    if ($user->id_role == 2) {
+        $query->whereHas('task.project', function ($q) use ($user) {
+            $q->where('id_project_manager', $user->member->id_member);
+        });
+    }
+
+    // 5. FILTER TANGGAL SPESIFIK (dari date navigation / dropdown)
+    if ($request->filled('date')) {
+        $query->whereDate('tanggal', $request->date);
+    }
+
+    // 6. FILTER BULAN
+    if ($request->filled('month')) {
+        $query->whereMonth('tanggal', $request->month);
+    }
+
+    // 7. FILTER TAHUN
+    if ($request->filled('year')) {
+        $query->whereYear('tanggal', $request->year);
+    }
+
+    // 8. FILTER STATUS APPROVAL
+    if ($request->filled('status')) {
+        $query->where('status_approval', $request->status);
+    }
+
+    // Ambil data dan Pagination (withQueryString biar filter kebawa pas ganti halaman)
+    $histories = $query->latest('updated_at')
+        ->paginate(20)
+        ->withQueryString();
+
+    // Daftar tahun yang tersedia di data, untuk isi dropdown Year
+    $years = RiwayatOvertime::selectRaw('YEAR(tanggal) as year')
+        ->distinct()
+        ->orderByDesc('year')
+        ->pluck('year');
+
+    // Daftar bulan untuk isi dropdown Month
+    $months = [
+        1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
+        5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
+        9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December',
+    ];
+
+    return view('overtimes.all-history', compact(
+        'histories', 'years', 'months', 'selectedDate', 'previousDate', 'nextDate', 'today'
+    ));
+}
 }

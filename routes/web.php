@@ -460,6 +460,9 @@ Route::middleware([
     |--------------------------------------------------------------------------
     */
 
+    // Route untuk halaman All History (Superadmin & PM)
+    Route::get('/overtimes/all-history', [\App\Http\Controllers\OvertimeController::class, 'allHistory'])->name('overtimes.all_history');
+
     Route::get(
         '/overtimes/approvals',
         [OvertimeController::class,'approvals']

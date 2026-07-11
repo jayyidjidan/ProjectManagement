@@ -27,11 +27,11 @@ class TaskController extends Controller
         $sort = $request->input('sort', 'created_at');
         $direction = $request->input('direction', 'desc');
         
-        // TANGKAP 4 PARAMETER FILTER DI SINI (Tambahkan id_member)
-        $projectFilter  = $request->input('project'); 
+        // TANGKAP PARAMETER FILTER (Akomodasi tombol "View All" yang mengirim 'project_id' dan form filter yang mengirim 'project')
+        $projectFilter  = $request->input('project_id') ?? $request->input('project'); 
         $statusFilter   = $request->input('status');
         $priorityFilter = $request->input('priority');
-        $memberFilter   = $request->input('id_member'); // <--- TAMBAHAN BARU
+        $memberFilter   = $request->input('id_member'); 
         
         $keyword = $request->input('q');
 
@@ -41,8 +41,20 @@ class TaskController extends Controller
             $currentProject = Proyeks::find($projectFilter); 
         }
 
+        // Ambil data user yang sedang login
+        $user = auth()->user();
+
         // 3. QUERY UTAMA TASKS DENGAN FILTER + SEARCH
         $tasks = Task::with(['project', 'priority', 'status', 'assignees'])
+            
+            // FILTER UTAMA: JIKA YANG LOGIN PROJECT MANAGER (id_role == 2)
+            // Batasi agar hanya menampilkan task dari project yang ia kelola sendiri
+            ->when($user->id_role == 2, function ($query) use ($user) {
+                $query->whereHas('project', function ($q) use ($user) {
+                    $q->where('id_project_manager', $user->member->id_member); 
+                });
+            })
+
             ->when($projectFilter, function ($query) use ($projectFilter) {
                 // Filter berdasarkan Project
                 $query->where('id_proyek', $projectFilter);
@@ -57,10 +69,9 @@ class TaskController extends Controller
                 // Filter berdasarkan Priority
                 $query->where('id_priority', $priorityFilter);
             })
-            ->when($memberFilter, function ($query) use ($memberFilter) { // <--- TAMBAHAN BARU
+            ->when($memberFilter, function ($query) use ($memberFilter) { 
                 // Filter berdasarkan Member (Relasi 'assignees' di model Task)
                 $query->whereHas('assignees', function ($q) use ($memberFilter) {
-                    // Pakai nama tabel pivot atau tabel master untuk menghindari kolom ambigu
                     $q->where('asignee_tasks.id_member', $memberFilter); 
                 });
             })
@@ -79,7 +90,13 @@ class TaskController extends Controller
         $overdue  = $tasks->filter(fn ($task) => $task->status?->status_name === 'Overdue');
 
         // 5. DATA LOOKUP UNTUK DROPDOWN FORM & INLINE EDIT
-        $projects = Proyeks::orderBy('nama_proyek')->get();
+        // Jika Project Manager (id_role == 2), dropdown pilihan project juga ikut terfilter
+        if ($user->id_role == 2) {
+            $projects = Proyeks::where('id_project_manager', $user->member->id_member)->orderBy('nama_proyek')->get();
+        } else {
+            $projects = Proyeks::orderBy('nama_proyek')->get();
+        }
+
         $priorities = Priority::orderBy('priority_name')->get();
         $members = Members::orderBy('member_name')->get();
         $statuses = StatusTasks::where('status_name', '!=', 'Overdue')
@@ -90,7 +107,7 @@ class TaskController extends Controller
         return view('tasks.index', compact(
             'planning', 'ongoing', 'reviewed', 'finished', 'canceled', 'overdue', 
             'projects', 'priorities', 'statuses', 'members', 'sort', 'direction',
-            'currentProject', 'memberFilter' // <-- Jangan lupa memberFilter dilempar ke view juga
+            'currentProject', 'memberFilter'
         ));
     }
 

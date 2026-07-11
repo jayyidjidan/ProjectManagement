@@ -15,7 +15,7 @@
     ])
 </head>
 
-<body class="min-h-screen flex p-0 lg:p-6 bg-[#F9F9F9]">
+<body class="min-h-screen flex p-0 lg:p-6 bg-sidebar">
 
     {{-- Kiri: Background Image --}}
     <div class="hidden lg:flex flex-col justify-between self-stretch items-start p-12  lg:w-2/3 bg-cover bg-center bg-no-repeat rounded-2xl" style="background-image: url('{{ asset('assets/Background.png') }}');">
@@ -27,10 +27,10 @@
     </div>
 
     {{-- Kanan: Form Login --}}
-    <div class="w-full lg:w-1/2 flex items-center justify-center p-8">
+    <div class="w-full lg:w-1/2 flex items-center justify-center lg:p-8">
 
             <x-card class="w-full border-0 bg-white/0 max-w-3xl">
-                <h1 class="text-5xl w-100 font-bold mb-2 leading-[1.2]">
+                <h1 class="text-3xl sm:text-5xl w-100 font-bold mb-2 leading-[1.2] text-[#111111]">
                     Login To Your Account
                 </h1>
 
@@ -126,17 +126,17 @@
 
                     </div>
 
-                    <div class="mt-5 text-center">
+                    <!-- <div class="mt-5 text-center">
 
                         <p class="text-gray-500 mb-2.5">
                             Quick Start for Scrum Meeting
                         </p>
 
-                        <x-button-secondary type="button" id="openScrumModal" class=" border-orange-500 text-orange-500 w-full bg-white/0 bg-transparent hover:bg-[#FEF1E9]">
+                        <x-button-secondary type="button" id="openScrumModal" class=" border-orange-500 text-orange-500 w-full bg-white/0 hover:bg-[#FEF1E9]">
                             Start Scrum
                         </x-button-secondary>
 
-                    </div>
+                    </div> -->
 
                 </form>
 
@@ -144,7 +144,7 @@
 
     </div>
 
-    {{-- MODAL SCRUM --}}
+    <!-- {{-- MODAL SCRUM --}}
     <div
         id="scrumModal"
         class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -236,7 +236,7 @@
 
         </div>
 
-    </div>
+    </div> -->
 
     <script>
 

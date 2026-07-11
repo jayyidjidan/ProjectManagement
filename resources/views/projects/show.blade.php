@@ -389,9 +389,7 @@
 
            <div class="flex items-center gap-3">
                 {{-- TOMBOL VIEW ALL --}}
-                <a
-                    href="{{ route('tasks.index', ['project_id' => $project->id_proyek]) }}">
-                    
+                <a href="{{ route('tasks.index', ['project' => $project->id_proyek]) }}">
                     <x-button-secondary>
                         View All
                     </x-button-secondary>
